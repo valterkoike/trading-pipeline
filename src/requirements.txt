@@ -1,0 +1,6 @@
+yfinance
+pandas
+kaleido==0.2.1
+plotly
+TA-Lib==0.4.25
+boto3
