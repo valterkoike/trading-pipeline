@@ -1,3 +1,4 @@
+# Define the required Terraform providers and their specific versions
 terraform {
   required_providers {
     aws = {
@@ -15,6 +16,7 @@ terraform {
   }
 }
 
+# Define input variables needed for deployment customization
 variable "aws_profile" {
   description = "The AWS CLI SSO profile name to use for deployment"
   type        = string
@@ -25,6 +27,7 @@ variable "subscriber_email" {
   type        = string
 }
 
+# Configure the AWS provider and fetch information about the current region
 provider "aws" {
   region  = "us-east-2"
   profile = var.aws_profile
@@ -32,6 +35,7 @@ provider "aws" {
 
 data "aws_region" "current" {}
 
+# Calculate a SHA256 hash of the source code files to trigger Docker rebuilds only when code changes
 locals {
   src_hash = substr(sha256(join("", [
     filesha256("${path.module}/src/ingestor.py"),
@@ -47,6 +51,8 @@ locals {
 # ==========================================
 # --- STEP 1: STORAGE, ECR, & INGESTOR ---
 # ==========================================
+# Set up foundational infrastructure: S3 bucket for raw data, ECR repository for Docker images,
+# a script to build/push the Docker image, and the initial Ingestor Lambda function with its IAM role.
 
 resource "random_id" "suffix" {
   byte_length = 4
@@ -161,6 +167,8 @@ resource "aws_lambda_function" "ingestor" {
 # ==========================================
 # --- STEP 2: ANALYZER ---
 # ==========================================
+# Deploy the Analyzer Lambda function, which runs market data calculations
+# using the unified Docker image with a specific command override.
 
 resource "aws_lambda_function" "analyzer" {
   depends_on    = [null_resource.docker_build_push]
@@ -185,6 +193,8 @@ resource "aws_lambda_function" "analyzer" {
 # ==========================================
 # --- STEP 3: PUBLISHER, AGGREGATOR, DYNAMO, & SNS ---
 # ==========================================
+# Set up DynamoDB for storing signals, SNS for alerts, and deploy the
+# Publisher and Aggregator Lambda functions along with their required permissions.
 
 resource "aws_dynamodb_table" "signals" {
   name         = "TradingSignals"
@@ -283,6 +293,8 @@ resource "aws_iam_role_policy_attachment" "attach_dynamo_sns" {
 # ==========================================
 # --- STEP FUNCTIONS (THE WORKFLOW) ---
 # ==========================================
+# Define an AWS Step Function state machine to orchestrate the Lambdas 
+# in a Map state (parallel processing per symbol), ending with the Aggregator.
 
 data "aws_iam_policy_document" "sfn_assume_role" {
   statement {
@@ -374,6 +386,8 @@ resource "aws_sfn_state_machine" "trading_pipeline" {
 # ==========================================
 # --- STEP 4: EVENTBRIDGE AUTOMATION ---
 # ==========================================
+# Configure Amazon EventBridge rules to automatically trigger the Step Function 
+# workflow on a specific cron schedule (market close on weekdays).
 
 resource "aws_iam_role" "eventbridge_sfn_role" {
   name = "eventbridge_sfn_invoke_role"
@@ -425,6 +439,8 @@ resource "aws_cloudwatch_event_target" "sfn_target" {
 # ==========================================
 # --- STEP 5: API GATEWAY & DASHBOARD ---
 # ==========================================
+# Setup a lightweight HTTP API Gateway and the API Handler Lambda to securely 
+# serve the calculated signals from DynamoDB to external clients (e.g., frontend).
 
 # 1. API Handler Lambda
 resource "aws_lambda_function" "api_handler" {
@@ -508,6 +524,8 @@ resource "aws_lambda_permission" "api_gateway_permission" {
 # ==========================================
 # --- OUTPUTS ---
 # ==========================================
+# Expose the API endpoint URL created by the API Gateway to be utilized 
+# by the frontend applications.
 
 output "api_endpoint" {
   value       = "${aws_apigatewayv2_api.http_api.api_endpoint}/signals"
