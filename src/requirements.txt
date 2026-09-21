@@ -1,6 +1,32 @@
+# ---------------------------------------------------------
+# DATA INGESTION & PROCESSING
+# ---------------------------------------------------------
+# Used by ingestor.py to fetch historical stock data from Yahoo Finance
 yfinance
+
+# Used across ingestor.py and analyzer.py for data manipulation and formatting
 pandas
+
+# ---------------------------------------------------------
+# CHARTING & VISUALIZATION
+# ---------------------------------------------------------
+# Engine used to export Plotly charts as static PNG images in memory.
+# Pinned to 0.2.1: Newer versions can cause hanging/timeout issues in AWS Lambda
 kaleido==0.2.1
+
+# Used by analyzer.py to generate the interactive-style candlestick charts
 plotly
+
+# ---------------------------------------------------------
+# TECHNICAL ANALYSIS
+# ---------------------------------------------------------
+# Used by analyzer.py to calculate RSI, SMA, CCI, and Bollinger Bands.
+# Pinned to 0.4.25 for stability with current pandas versions
 TA-Lib==0.4.25
+
+# ---------------------------------------------------------
+# CLOUD INFRASTRUCTURE
+# ---------------------------------------------------------
+# AWS SDK for Python. Used across all Lambda functions to interact with 
+# S3 (storage), DynamoDB (database), and SNS (email alerts).
 boto3
